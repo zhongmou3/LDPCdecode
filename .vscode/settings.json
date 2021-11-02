@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.cuh": "cpp",
+        "*.cu": "cpp",
+        "cmath": "cpp"
+    },
+    "editor.formatOnSave": true,
+}
