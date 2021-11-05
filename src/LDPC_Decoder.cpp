@@ -10,7 +10,6 @@
 #include "LDPC_Decoder.h"
 #include "float.h"
 
-
 float myabs(float a)
 {
 	if (a < 0)
@@ -85,23 +84,25 @@ void Demodulate(LDPCCode *H, AWGNChannel *AWGN, VN *Variablenode, float *Modulat
 	}
 	if (Punch == 1)
 	{
-		for (int s = 0; s < 2*Z; s++)
+		for (int s = 0; s < 2 * Z; s++)
 			Variablenode[s].L_ch = 0;
-		for (int s = 2*Z; s < H->Variablenode_num; s++)
+		for (int s = 2 * Z; s < H->Variablenode_num; s++)
 		{
 			Variablenode[s].L_ch = 2 * Modulate_sym_Channelout[s] / (AWGN->sigma * AWGN->sigma);
 		}
 	}
 	if (Punch == 2)
 	{
-		for (int s = 0; s < H->Variablenode_num-2*Z; s++)
+		for (int s = 0; s < H->Variablenode_num - 2 * Z; s++)
 			Variablenode[s].L_ch = 2 * Modulate_sym_Channelout[s] / (AWGN->sigma * AWGN->sigma);
 		for (int s = H->Variablenode_num - 2 * Z; s < H->Variablenode_num; s++)
 		{
 			Variablenode[s].L_ch = 0;
 		}
 	}
-	
+}
+int Decoding_Layerzed_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
+{
 }
 int Decoding_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
 {
