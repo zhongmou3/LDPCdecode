@@ -7,3 +7,5 @@
 
 ![image](https://user-images.githubusercontent.com/69625023/140442698-309cedd4-0353-4e24-af18-b6ac67a51e2f.png)
 上面的算法是水平分层，老师说我们的矩阵适合的是垂直分层算法
+![image](https://user-images.githubusercontent.com/69625023/140531619-c8730ca2-2c7d-48b7-84d2-54ca96afff4a.png)
+然后这个是垂直分层，可以看出和普通的MS算法相比，每一层是直接计算，不需要等某一个节点全部更新完毕
