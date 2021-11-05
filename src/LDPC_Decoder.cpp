@@ -101,9 +101,6 @@ void Demodulate(LDPCCode *H, AWGNChannel *AWGN, VN *Variablenode, float *Modulat
 		}
 	}
 }
-int Decoding_Layerzed_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
-{
-}
 int Decoding_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
 {
 	for (int col = 0; col < H->Variablenode_num; col++)
@@ -215,6 +212,126 @@ int Decoding_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
 				}
 				Checknode[row].L_c2v[dc] = 2 * atanh(temp);
 				// Checknode[row].L_c2v[dc] *= factor_BP; //修正
+			}
+		}
+	}
+	H->iteraTime = iter_number - 1;
+	return 0;
+}
+int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* DecodeOutput)
+{
+	for (int col = 0; col < H->Variablenode_num; col++)
+	{
+		for (int d = 0; d < Variablenode[col].weight; d++)
+		{
+			Variablenode[col].L_v2c[d] = Variablenode[col].L_ch;
+		}
+	}
+	for (int row = 0; row < H->Checknode_num; row++)
+	{
+		for (int d = 0; d < Checknode[row].weight; d++)
+		{
+			Checknode[row].L_c2v[d] = 0;
+		}
+	}
+	
+	int iter_number = 0;
+	bool decode_correct = true;
+	while (iter_number++ < maxIT)
+	{
+		// printf("it_time: %d\n",iter_number);
+		for (int col = 0; col < H->Variablenode_num; col++)
+		{
+			for (int d = 0; d < Variablenode[col].weight; d++)
+			{
+				Variablenode[col].LLR = Variablenode[col].L_ch;
+			}
+		}
+		for (int col = 0; col < H->Variablenode_num; col++)
+		{
+			for (int d = 0; d < Variablenode[col].weight; d++)
+			{
+				Variablenode[col].LLR += Checknode[Variablenode[col].linkCNs[d]].L_c2v[index_in_CN(Variablenode, col, d, Checknode)];
+			}
+			if (Variablenode[col].LLR > 0)
+			{
+				DecodeOutput[col] = 0;
+			}
+			else
+			{
+				DecodeOutput[col] = 1;
+			}
+			// printf("%d ", DecodeOutput[col]);
+		}
+		// printf("\n");
+		// exit(0);
+		//以下检测cH是否等于0
+		decode_correct = true;
+		int sum_temp = 0;
+		for (int row = 0; row < H->Checknode_num; row++)
+		{
+			for (int i = 0; i < Checknode[row].weight; i++)
+			{
+				sum_temp = sum_temp ^ DecodeOutput[Checknode[row].linkVNs[i]];
+			}
+			if (sum_temp)
+			{
+				decode_correct = false;
+				break;
+			}
+		}
+		if (decode_correct)
+		{
+			H->iteraTime = iter_number - 1;
+			return 1;
+		}
+
+		// message from var to check
+		for (int col = 0; col < H->Variablenode_num; col++)
+		{
+			for (int dv = 0; dv < Variablenode[col].weight; dv++)
+			{
+
+				Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
+			}
+		}
+
+		float L_min = 0;
+		float L_submin = 0;
+		int sign = 1;
+
+		// message from check to var
+		for (int row = 0; row < H->Checknode_num; row++)
+		{
+			//find max and submax
+			findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+			// printf("%f %f\n", L_min, L_submin);
+			// exit(0);
+			for (int dc = 0; dc < Checknode[row].weight; dc++)
+			{
+				if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+				{
+					if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+					{
+						Checknode[row].L_c2v[dc] = sign * L_min;
+					}
+					else
+					{
+						Checknode[row].L_c2v[dc] = -sign * L_min;
+					}
+				}
+				else
+				{
+					if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+					{
+						Checknode[row].L_c2v[dc] = sign * L_submin;
+					}
+					else
+					{
+						Checknode[row].L_c2v[dc] = -sign * L_submin;
+					}
+				}
+				Checknode[row].L_c2v[dc] *= factor_NMS;
 			}
 		}
 	}
