@@ -234,11 +234,13 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 			Checknode[row].L_c2v[d] = 0;
 		}
 	}
-	
+
 	int iter_number = 0;
 	bool decode_correct = true;
+	int col_layer_num = H->Variablenode_num/Z;
 	while (iter_number++ < maxIT)
 	{
+
 		// printf("it_time: %d\n",iter_number);
 		for (int col = 0; col < H->Variablenode_num; col++)
 		{
@@ -266,6 +268,26 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 		// printf("\n");
 		// exit(0);
 
+		decode_correct = true;
+		int sum_temp = 0;
+		for (int row = 0; row < H->Checknode_num; row++)
+		{
+			for (int i = 0; i < Checknode[row].weight; i++)
+			{
+				sum_temp = sum_temp ^ DecodeOutput[Checknode[row].linkVNs[i]];
+			}
+			if (sum_temp)
+			{
+				decode_correct = false;
+				break;
+			}
+		}
+		if (decode_correct)
+		{
+			H->iteraTime = iter_number - 1;
+			return 1;
+		}
+
 		// message from var to check
 		for (int col = 0; col < H->Variablenode_num; col++)
 		{
@@ -275,6 +297,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 				Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
 			}
 		}
+
 		float L_min = 0;
 		float L_submin = 0;
 		int sign = 1;
@@ -313,29 +336,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 				Checknode[row].L_c2v[dc] *= factor_NMS;
 			}
 		}
-		//以下检测cH是否等于0
-		decode_correct = true;
-		int sum_temp = 0;
-		for (int row = 0; row < H->Checknode_num; row++)
-		{
-			for (int i = 0; i < Checknode[row].weight; i++)
-			{
-				sum_temp = sum_temp ^ DecodeOutput[Checknode[row].linkVNs[i]];
-			}
-			if (sum_temp)
-			{
-				decode_correct = false;
-				break;
-			}
-		}
-		if (decode_correct)
-		{
-			H->iteraTime = iter_number - 1;
-			return 1;
-		}
 	}
-	
-
 	H->iteraTime = iter_number - 1;
 	return 0;
 }
