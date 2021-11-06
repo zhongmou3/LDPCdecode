@@ -73,6 +73,35 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 	}
 }
 
+void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L)
+{
+	L_min = FLT_MAX;
+	L_submin = FLT_MAX;
+	sign = 1;
+	for (int i = 0; i < Checknode[row].weight; i++)
+	{
+		if (Checknode[row].linkVNs[i] >= Z * L && Checknode[row].linkVNs[i] < Z * (L + 1))
+		{
+			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_submin)
+			{
+				if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_min)
+				{
+					L_submin = L_min;
+					L_min = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
+				}
+				else
+				{
+					L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
+				}
+			}
+			if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
+			{
+				sign = sign * -1;
+			}
+		}	
+	}
+}
+
 void Demodulate(LDPCCode *H, AWGNChannel *AWGN, VN *Variablenode, float *Modulate_sym_Channelout)
 {
 	if (Punch == 0)
@@ -283,38 +312,46 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 			float L_min = 0;
 			float L_submin = 0;
 			int sign = 1;
-
+			
 			// message from check to var
 			for (int row = 0; row < H->Checknode_num; row++)
 			{
+
 				//find max and submax
-				findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+				findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L);
 				// printf("%f %f\n", L_min, L_submin);
 				// exit(0);
 				for (int dc = 0; dc < Checknode[row].weight; dc++)
 				{
-					if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+					if (Checknode[row].linkVNs[dc] >= Z * L && Checknode[row].linkVNs[dc] < Z * (L + 1))
 					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+						if (L_min != FLT_MAX&& L_submin!= FLT_MAX)//最小值和次小值都找到了
 						{
-							Checknode[row].L_c2v[dc] = sign * L_min;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_min;
+							if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+							{
+								if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+								{
+									Checknode[row].L_c2v[dc] = sign * L_min;
+								}
+								else
+								{
+									Checknode[row].L_c2v[dc] = -sign * L_min;
+								}
+							}
+							else
+							{
+								if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+								{
+									Checknode[row].L_c2v[dc] = sign * L_submin;
+								}
+								else
+								{
+									Checknode[row].L_c2v[dc] = -sign * L_submin;
+								}
+							}
 						}
 					}
-					else
-					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
-						{
-							Checknode[row].L_c2v[dc] = sign * L_submin;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_submin;
-						}
-					}
+					
 					Checknode[row].L_c2v[dc] *= factor_NMS;
 				}
 			}
