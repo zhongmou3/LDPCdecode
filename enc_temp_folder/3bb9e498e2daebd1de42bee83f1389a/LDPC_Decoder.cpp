@@ -38,7 +38,7 @@ float myabs(float a)
 *           int CNnum       第CNnum个校验节点
 *           int index_in_linkVNS  校验节点连接的变量节点是第index_in_linkVNS个
 *           VN *Variablenode   变量节点的指针
-* @return   i--变量节点连接的第i个校验点
+* @return   校验节点是变量节点连接的第i个的i
 ************************************************************************************************/
 int index_in_VN(CN *Checknode, int CNnum, int index_in_linkVNS, VN *Variablenode)
 {
@@ -52,19 +52,7 @@ int index_in_VN(CN *Checknode, int CNnum, int index_in_linkVNS, VN *Variablenode
 	printf("index_in_VN error\n");
 	exit(0);
 }
-/***********************************************************************************************
-*
-* @brief          计算校验节点中的参数
-* @explanation    已知一个变量节点与一个校验节点相连
-*                 知道这是第几个变量节点
-*                 同时知道这个变量节点连接的校验节点是第几个
-*				  计算对于这个校验节点来说，这是第几个连接他的变量节点
-* @param    VN *Variablenode--变量节点的指针
-*           int VNnum--第VNnum个变量节点
-*           int index_in_linkCNS--变量节点连接的校验节点是第index_in_linkVNS个
-*           CN *Checknode--校验节点的指针
-* @return   i--校验节点连接的第i个变量节点
-************************************************************************************************/
+
 int index_in_CN(VN *Variablenode, int VNnum, int index_in_linkCNS, CN *Checknode)
 {
 	for (int i = 0; i < Checknode[Variablenode[VNnum].linkCNs[index_in_linkCNS]].weight; i++)
@@ -77,19 +65,7 @@ int index_in_CN(VN *Variablenode, int VNnum, int index_in_linkCNS, CN *Checknode
 	printf("index_in_CN error\n");
 	exit(0);
 }
-/***********************************************************************************************
-*
-* @brief      寻找最小值和次小值   
-* @explanation    已知第几个校验节点
-*                 计算出对于这个校验节点来说，连接的变量节点传递的似然比信息的最小值和次小值
-* @param       CN *Checknode--校验节点的指针
-*			   VN *Variablenode--变量节点的指针
-*              float &L_min--计算出来的最小值
-*              float &L_submin--计算出来的次小值
-*			   int &sign
-*              int row--这个校验节点是第row个
-* @return   none
-************************************************************************************************/
+
 void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_submin, int &sign, int row)
 {
 	L_min = FLT_MAX;
@@ -291,124 +267,6 @@ int Decoding_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
 	H->iteraTime = iter_number - 1;
 	return 0;
 }
-int Decoding_RowLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* DecodeOutput)
-{
-	for (int col = 0; col < H->Variablenode_num; col++)
-	{
-		for (int d = 0; d < Variablenode[col].weight; d++)
-		{
-			Variablenode[col].L_v2c[d] = Variablenode[col].L_ch;
-		}
-	}
-	for (int row = 0; row < H->Checknode_num; row++)
-	{
-		for (int d = 0; d < Checknode[row].weight; d++)
-		{
-			Checknode[row].L_c2v[d] = 0;
-		}
-	}
-
-	int iter_number = 0;
-	bool decode_correct = true;
-	int row_layer_num = H->Checknode_num/Z;
-	while (iter_number++ < maxIT)
-	{
-		for (int L = 0; L < row_layer_num; L++)
-		{
-			//变量节点消息之和
-			for (int col = 0; col < H->Variablenode_num; col++)
-			{
-				for (int d = 0; d < Variablenode[col].weight; d++)
-				{
-					Variablenode[col].LLR = Variablenode[col].L_ch;
-				}
-			}
-			for (int col = 0; col < H->Variablenode_num; col++)
-			{
-				for (int d = 0; d < Variablenode[col].weight; d++)
-				{
-					Variablenode[col].LLR += Checknode[Variablenode[col].linkCNs[d]].L_c2v[index_in_CN(Variablenode, col, d, Checknode)];
-				}
-				if (Variablenode[col].LLR > 0)
-				{
-					DecodeOutput[col] = 0;
-				}
-				else
-				{
-					DecodeOutput[col] = 1;
-				}
-			}
-
-			// message from var to check
-			for (int col = 0; col < H->Variablenode_num; col++)
-			{
-				for (int dv = 0; dv < Variablenode[col].weight; dv++)
-				{
-
-					Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
-				}
-			}
-
-			// message from check to var
-			float L_min = 0;
-			float L_submin = 0;
-			int sign = 1;
-			for (int row = 0; row < H->Checknode_num; row++)
-			{
-				//find max and submax
-				findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
-				for (int dc = 0; dc < Checknode[row].weight; dc++)
-				{
-					if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
-					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
-						{
-							Checknode[row].L_c2v[dc] = sign * L_min;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_min;
-						}
-					}
-					else
-					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
-						{
-							Checknode[row].L_c2v[dc] = sign * L_submin;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_submin;
-						}
-					}
-					Checknode[row].L_c2v[dc] *= factor_NMS;
-				}
-			}
-		}
-		//hard decision
-		decode_correct = true;
-		int sum_temp = 0;
-		for (int row = 0; row < H->Checknode_num; row++)
-		{
-			for (int i = 0; i < Checknode[row].weight; i++)
-			{
-				sum_temp = sum_temp ^ DecodeOutput[Checknode[row].linkVNs[i]];
-			}
-			if (sum_temp)
-			{
-				decode_correct = false;
-				break;
-			}
-		}
-		if (decode_correct)
-		{
-			H->iteraTime = iter_number - 1;
-			return 1;
-		}
-	}
-	H->iteraTime = iter_number - 1;
-	return 0;
-}
 int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* DecodeOutput)
 {
 	for (int col = 0; col < H->Variablenode_num; col++)
@@ -441,6 +299,8 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 			{
 				//find max and submax
 				findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+				// printf("%f %f\n", L_min, L_submin);
+				// exit(0);
 				for (int dc = 0; dc < Checknode[row].weight; dc++)
 				{
 					if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
@@ -490,8 +350,10 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 				{
 					DecodeOutput[col] = 1;
 				}
+				// printf("%d ", DecodeOutput[col]);
 			}
-			// message from var to check
+			// printf("\n");
+			// exit(0);	// message from var to check
 			for (int col = L * Z; col < (L + 1) * Z; col++)
 			{
 				for (int dv = 0; dv < Variablenode[col].weight; dv++)
