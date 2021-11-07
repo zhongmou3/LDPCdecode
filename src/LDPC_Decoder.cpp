@@ -11,12 +11,10 @@
 #include "float.h"
 /***********************************************************************************************
 *
-* @brief    KBI_Init - Enable Keyboard interrupts on channels
-* @brief    KBI键盘中断初始化
-* @param    none
-* @return   none
-* Sample usage:                 GPIO_Init()     //先配置相应的GPIO为输入,用于使能输入与上拉配置
-*                               KBI_Init(KBI1_P0,IRQ_RISING);		            //通道选择为KBI1_P0，上升沿触发
+* @brief    计算绝对值
+* @explanation    计算绝对值
+* @param    a
+* @return   a的绝对值
 ************************************************************************************************/
 float myabs(float a)
 {
@@ -29,6 +27,19 @@ float myabs(float a)
 		return a;
 	}
 }
+/***********************************************************************************************
+*
+* @brief          计算变量节点中的参数
+* @explanation    已知一个校验节点与一个变量节点相连
+*                 知道这是第几个校验节点
+*                 同时知道这个校验节点连接的变量节点是第几个
+*				  计算对于这个变量节点来说，这是第几个连接他的校验节点             
+* @param    CN *Checknode   校验节点的指针
+*           int CNnum       第CNnum个校验节点
+*           int index_in_linkVNS  校验节点连接的变量节点是第index_in_linkVNS个
+*           VN *Variablenode   变量节点的指针
+* @return   校验节点是变量节点连接的第i个的i
+************************************************************************************************/
 int index_in_VN(CN *Checknode, int CNnum, int index_in_linkVNS, VN *Variablenode)
 {
 	for (int i = 0; i < Variablenode[Checknode[CNnum].linkVNs[index_in_linkVNS]].weight; i++)
