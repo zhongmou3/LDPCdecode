@@ -25,6 +25,10 @@
      
 ![image](https://user-images.githubusercontent.com/69625023/140442698-309cedd4-0353-4e24-af18-b6ac67a51e2f.png)
 
-上面的算法是水平分层，是一种按行分层的算法，本次也编写了这个算法
+![image](https://user-images.githubusercontent.com/69625023/140650615-0af6582d-a775-4684-817f-4d15b2ad8a3f.png)
+
+![image](https://user-images.githubusercontent.com/69625023/140650619-1b841760-a6d1-4597-af2d-db86a60ec4f3.png)
+
+上面的算法是水平分层，是一种按行分层的算法，当然这个图用的是bp，我们用最小和，本次也编写了这个算法
 
 这两种算法本质相同，比如在算CTV时，里面的变量节点在一直更新，这样收敛速度会加快，但是水平分层好实现一些
