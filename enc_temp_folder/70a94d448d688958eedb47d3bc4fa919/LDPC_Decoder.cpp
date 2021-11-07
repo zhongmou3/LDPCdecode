@@ -9,15 +9,7 @@
 #include "struct.h"
 #include "LDPC_Decoder.h"
 #include "float.h"
-/***********************************************************************************************
-*
-* @brief    KBI_Init - Enable Keyboard interrupts on channels
-* @brief    KBI键盘中断初始化
-* @param    none
-* @return   none
-* Sample usage:                 GPIO_Init()     //先配置相应的GPIO为输入,用于使能输入与上拉配置
-*                               KBI_Init(KBI1_P0,IRQ_RISING);		            //通道选择为KBI1_P0，上升沿触发
-************************************************************************************************/
+
 float myabs(float a)
 {
 	if (a < 0)
