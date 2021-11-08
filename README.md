@@ -23,6 +23,8 @@
 
      理解上的错误，CTV需要算所有的变量节点
      
+同时有个要注意的地方，第一次迭代不要用分层
+     
 ![image](https://user-images.githubusercontent.com/69625023/140442698-309cedd4-0353-4e24-af18-b6ac67a51e2f.png)
 
 ![image](https://user-images.githubusercontent.com/69625023/140650615-0af6582d-a775-4684-817f-4d15b2ad8a3f.png)
