@@ -86,7 +86,7 @@ int index_in_CN(VN *Variablenode, int VNnum, int index_in_linkCNS, CN *Checknode
 *			   VN *Variablenode--变量节点的指针
 *              float &L_min--计算出来的最小值
 *              float &L_submin--计算出来的次小值
-*			   int &sign
+*			   int &sign--符号
 *              int row--这个校验节点是第row个
 * @return   none
 ************************************************************************************************/
@@ -115,16 +115,31 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 		}
 	}
 }
-
-//对这个函数,我的评价是，寄
-void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L)
+/***********************************************************************************************
+*
+* @brief      分层算法寻找最小值和次小值
+* @explanation    已知第几个校验节点
+*                 计算出对于这个校验节点来说，连接的变量节点传递的似然比信息的最小值和次小值
+*				  不过由于是分层算法，因此只要把这一层的变量节点消息和之前的比较即可
+* @param       CN *Checknode--校验节点的指针
+*			   VN *Variablenode--变量节点的指针
+*              float &L_min--计算出来的最小值
+*              float &L_submin--计算出来的次小值
+*			   int &sign--符号
+*              int row--这个校验节点是第row个
+*			   int L--第L层
+*			   int original_L_min--上一层计算得到的最小值
+*			   int original_L_submin--上一层计算得到的次小值
+* @return   none
+************************************************************************************************/
+void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,int original_L_min,int original_L_submin)
 {
-	L_min = FLT_MAX;
-	L_submin = FLT_MAX;
+	L_min = original_L_min;
+	L_submin = original_L_submin;
 	sign = 1;
 	for (int i = 0; i < Checknode[row].weight; i++)
 	{
-		if (Checknode[row].linkVNs[i] >= Z * L && Checknode[row].linkVNs[i] < Z * (L + 1))
+		if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * L)//规定必须在这一层里
 		{
 			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_submin)
 			{
@@ -173,6 +188,171 @@ void Demodulate(LDPCCode *H, AWGNChannel *AWGN, VN *Variablenode, float *Modulat
 			Variablenode[s].L_ch = 0;
 		}
 	}
+}
+int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* DecodeOutput)
+{
+	for (int col = 0; col < H->Variablenode_num; col++)
+	{
+		for (int d = 0; d < Variablenode[col].weight; d++)
+		{
+			Variablenode[col].L_v2c[d] = Variablenode[col].L_ch;
+		}
+	}
+	for (int row = 0; row < H->Checknode_num; row++)
+	{
+		for (int d = 0; d < Checknode[row].weight; d++)
+		{
+			Checknode[row].L_c2v[d] = 0;
+		}
+	}
+
+	int iter_number = 0;
+	bool decode_correct = true;
+	int col_layer_num = H->Variablenode_num / Z;
+	float L_min = 0;
+	float L_submin = 0;
+	int sign = 1;
+	float *original_L_min;
+	original_L_min = (float*)malloc(H->Checknode_num * sizeof(float));
+	float *original_L_submin;
+	original_L_submin = (float*)malloc(H->Checknode_num * sizeof(float));
+	while (iter_number++ < maxIT)
+	{
+		for (int L = 0; L < col_layer_num; L++)
+		{		
+			// message from check to var
+			if (L == col_layer_num-1||L==0)            //第一层和最后一层要将所有的值一起比较最小值
+			{
+				for (int row = 0; row < H->Checknode_num; row++)
+				{
+					//find max and submax
+					findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+					original_L_min[row] = L_min;
+					original_L_submin[row] = L_submin;
+					for (int dc = 0; dc < Checknode[row].weight; dc++)
+					{
+						if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+						{
+							if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+							{
+								Checknode[row].L_c2v[dc] = sign * L_min;
+							}
+							else
+							{
+								Checknode[row].L_c2v[dc] = -sign * L_min;
+							}
+						}
+						else
+						{
+							if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+							{
+								Checknode[row].L_c2v[dc] = sign * L_submin;
+							}
+							else
+							{
+								Checknode[row].L_c2v[dc] = -sign * L_submin;
+							}
+						}
+						Checknode[row].L_c2v[dc] *= factor_NMS;
+					}
+				}
+			}
+			else              //之后的层只要将更新了的值和以前的最小值比较即可
+			{
+				
+				for (int row = 0; row < H->Checknode_num; row++)
+				{
+					//find max and submax
+					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row]);
+					original_L_min[row] = L_min;
+					original_L_submin[row] = L_submin;
+					for (int dc = 0; dc < Checknode[row].weight; dc++)
+					{
+						if (Checknode[row].linkVNs[dc] >= Z * (L-1) && Checknode[row].linkVNs[dc] < Z * L )
+						{
+							if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+							{
+								if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+								{
+									Checknode[row].L_c2v[dc] = sign * L_min;
+								}
+								else
+								{
+									Checknode[row].L_c2v[dc] = -sign * L_min;
+								}
+							}
+							else
+							{
+								if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+								{
+									Checknode[row].L_c2v[dc] = sign * L_submin;
+								}
+								else
+								{
+									Checknode[row].L_c2v[dc] = -sign * L_submin;
+								}
+							}
+							Checknode[row].L_c2v[dc] *= factor_NMS;
+						}
+					}
+				}
+			}
+			//变量节点消息之和
+			for (int col = L * Z; col < (L + 1) * Z; col++)
+			{
+				for (int d = 0; d < Variablenode[col].weight; d++)
+				{
+					Variablenode[col].LLR = Variablenode[col].L_ch;
+				}
+			}
+			for (int col = L * Z; col < (L + 1) * Z; col++)
+			{
+				for (int d = 0; d < Variablenode[col].weight; d++)
+				{
+					Variablenode[col].LLR += Checknode[Variablenode[col].linkCNs[d]].L_c2v[index_in_CN(Variablenode, col, d, Checknode)];
+				}
+				if (Variablenode[col].LLR > 0)
+				{
+					DecodeOutput[col] = 0;
+				}
+				else
+				{
+					DecodeOutput[col] = 1;
+				}
+			}
+			// message from var to check
+			for (int col = L * Z; col < (L + 1) * Z; col++)
+			{
+				for (int dv = 0; dv < Variablenode[col].weight; dv++)
+				{
+					Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
+				}
+			}
+		}
+
+		//Hard decision
+		decode_correct = true;
+		int sum_temp = 0;
+		for (int row = 0; row < H->Checknode_num; row++)
+		{
+			for (int i = 0; i < Checknode[row].weight; i++)
+			{
+				sum_temp = sum_temp ^ DecodeOutput[Checknode[row].linkVNs[i]];
+			}
+			if (sum_temp)
+			{
+				decode_correct = false;
+				break;
+			}
+		}
+		if (decode_correct)
+		{
+			H->iteraTime = iter_number - 1;
+			return 1;
+		}
+	}
+	H->iteraTime = iter_number - 1;
+	return 0;
 }
 int Decoding_BP(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
 {
@@ -311,6 +491,9 @@ int Decoding_RowLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 	int iter_number = 0;
 	bool decode_correct = true;
 	int row_layer_num = H->Checknode_num/Z;
+	float L_min = 0;
+	float L_submin = 0;
+	int sign = 1;
 	while (iter_number++ < maxIT)
 	{
 		for (int L = 0; L < row_layer_num; L++)
@@ -350,40 +533,75 @@ int Decoding_RowLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 			}
 
 			// message from check to var
-			float L_min = 0;
-			float L_submin = 0;
-			int sign = 1;
-			for (int row = 0; row < H->Checknode_num; row++)
+			if (L == 0)
 			{
-				//find max and submax
-				findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
-				for (int dc = 0; dc < Checknode[row].weight; dc++)
+				for (int row = 0; row < H->Checknode_num; row++)
 				{
-					if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+					//find max and submax
+					findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+					for (int dc = 0; dc < Checknode[row].weight; dc++)
 					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+						if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
 						{
-							Checknode[row].L_c2v[dc] = sign * L_min;
+							if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+							{
+								Checknode[row].L_c2v[dc] = sign * L_min;
+							}
+							else
+							{
+								Checknode[row].L_c2v[dc] = -sign * L_min;
+							}
 						}
 						else
 						{
-							Checknode[row].L_c2v[dc] = -sign * L_min;
+							if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+							{
+								Checknode[row].L_c2v[dc] = sign * L_submin;
+							}
+							else
+							{
+								Checknode[row].L_c2v[dc] = -sign * L_submin;
+							}
 						}
+						Checknode[row].L_c2v[dc] *= factor_NMS;
 					}
-					else
-					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
-						{
-							Checknode[row].L_c2v[dc] = sign * L_submin;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_submin;
-						}
-					}
-					Checknode[row].L_c2v[dc] *= factor_NMS;
 				}
 			}
+			else
+			{
+				for (int row = 0; row < H->Checknode_num; row++)
+				{
+					//find max and submax
+					findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+					for (int dc = 0; dc < Checknode[row].weight; dc++)
+					{
+						if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
+						{
+							if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+							{
+								Checknode[row].L_c2v[dc] = sign * L_min;
+							}
+							else
+							{
+								Checknode[row].L_c2v[dc] = -sign * L_min;
+							}
+						}
+						else
+						{
+							if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
+							{
+								Checknode[row].L_c2v[dc] = sign * L_submin;
+							}
+							else
+							{
+								Checknode[row].L_c2v[dc] = -sign * L_submin;
+							}
+						}
+						Checknode[row].L_c2v[dc] *= factor_NMS;
+					}
+				}
+			}
+			
 		}
 		//hard decision
 		decode_correct = true;
@@ -409,124 +627,7 @@ int Decoding_RowLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 	H->iteraTime = iter_number - 1;
 	return 0;
 }
-int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* DecodeOutput)
-{
-	for (int col = 0; col < H->Variablenode_num; col++)
-	{
-		for (int d = 0; d < Variablenode[col].weight; d++)
-		{
-			Variablenode[col].L_v2c[d] = Variablenode[col].L_ch;
-		}
-	}
-	for (int row = 0; row < H->Checknode_num; row++)
-	{
-		for (int d = 0; d < Checknode[row].weight; d++)
-		{
-			Checknode[row].L_c2v[d] = 0;
-		}
-	}
 
-	int iter_number = 0;
-	bool decode_correct = true;
-	int col_layer_num = H->Variablenode_num/Z;
-	while (iter_number++ < maxIT)
-	{
-		for (int L = 0; L < col_layer_num; L++)
-		{
-			float L_min = 0;
-			float L_submin = 0;
-			int sign = 1;
-			// message from check to var
-			for (int row = 0; row < H->Checknode_num; row++)
-			{
-				//find max and submax
-				findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
-				for (int dc = 0; dc < Checknode[row].weight; dc++)
-				{
-					if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
-					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
-						{
-							Checknode[row].L_c2v[dc] = sign * L_min;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_min;
-						}
-					}
-					else
-					{
-						if (Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)] >= 0)
-						{
-							Checknode[row].L_c2v[dc] = sign * L_submin;
-						}
-						else
-						{
-							Checknode[row].L_c2v[dc] = -sign * L_submin;
-						}
-					}
-					Checknode[row].L_c2v[dc] *= factor_NMS;
-				}
-			}
-			//变量节点消息之和
-			for (int col = L*Z; col < (L+1)*Z; col++)
-			{
-				for (int d = 0; d < Variablenode[col].weight; d++)
-				{
-					Variablenode[col].LLR = Variablenode[col].L_ch;
-				}
-			}
-			for (int col = L * Z; col < (L + 1) * Z; col++)
-			{
-				for (int d = 0; d < Variablenode[col].weight; d++)
-				{
-					Variablenode[col].LLR += Checknode[Variablenode[col].linkCNs[d]].L_c2v[index_in_CN(Variablenode, col, d, Checknode)];
-				}
-				if (Variablenode[col].LLR > 0)
-				{
-					DecodeOutput[col] = 0;
-				}
-				else
-				{
-					DecodeOutput[col] = 1;
-				}
-			}
-			// message from var to check
-			for (int col = L * Z; col < (L + 1) * Z; col++)
-			{
-				for (int dv = 0; dv < Variablenode[col].weight; dv++)
-				{
-					Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
-				}
-			}
-
-			
-		}
-		
-		//Hard decision
-		decode_correct = true;
-		int sum_temp = 0;
-		for (int row = 0; row < H->Checknode_num; row++)
-		{
-			for (int i = 0; i < Checknode[row].weight; i++)
-			{
-				sum_temp = sum_temp ^ DecodeOutput[Checknode[row].linkVNs[i]];
-			}
-			if (sum_temp)
-			{
-				decode_correct = false;
-				break;
-			}
-		}
-		if (decode_correct)
-		{
-			H->iteraTime = iter_number - 1;
-			return 1;
-		}
-	}
-	H->iteraTime = iter_number - 1;
-	return 0;
-}
 int Decoding_MS(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput)
 {
 	for (int col = 0; col < H->Variablenode_num; col++)
