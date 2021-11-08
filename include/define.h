@@ -31,13 +31,13 @@
 #define snrtype 0   // 0--Eb/No; 1--Es/No
 
 //仿真参数
-#define startSNR 3.5
+#define startSNR 3.7
 #define stepSNR 0.1
 #define stopSNR 4.0
 
 #define leastErrorFrames 100 // 最少错误帧数
 #define leastTestFrames 200  // 最少仿真帧数
-#define displayStep 100000   // 定义将译码结果写入相应txt文件的频率
+#define displayStep 100   // 定义将译码结果写入相应txt文件的频率
 
 //CUDA c相应参数
 #define PI (3.1415926)
