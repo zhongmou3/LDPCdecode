@@ -117,7 +117,52 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 }
 /***********************************************************************************************
 *
-* @brief      分层算法寻找最小值和次小值
+* @brief      分层算法寻找最小值和次小值1
+* @explanation    已知第几个校验节点
+*                 计算出对于这个校验节点来说，连接的变量节点传递的似然比信息的最小值和次小值
+*                 这个是分层算法特有的寻找最小值的函数，因为需要一些判断用的参数
+* @param       CN *Checknode--校验节点的指针
+*			   VN *Variablenode--变量节点的指针
+*              float &L_min--计算出来的最小值
+*              float &L_submin--计算出来的次小值
+*			   int &sign--符号
+*              int row--这个校验节点是第row个
+*			   int &my_min_refresh_num--最小值更新了，变量节点是这个校验节点对应的第my_min_refresh_num个
+*              int &my_submin_refresh_num--次小值更新了，变量节点是这个校验节点对应的第my_submin_refresh_num个
+*              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
+* @return   none
+************************************************************************************************/
+void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row, int &my_min_refresh_num, int &my_submin_refresh_num,int min_refresh_num)
+{
+	L_min = FLT_MAX;
+	L_submin = FLT_MAX;
+	sign = 1;
+	for (int i = 0; i < Checknode[row].weight; i++)
+	{
+		if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_submin)
+		{
+			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_min)
+			{
+				L_submin = L_min;
+				my_submin_refresh_num = min_refresh_num;
+				L_min = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
+				my_min_refresh_num = i;
+			}
+			else
+			{
+				L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
+				my_submin_refresh_num = i;
+			}
+		}
+		if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
+		{
+			sign = sign * -1;
+		}
+	}
+}
+/***********************************************************************************************
+*
+* @brief      分层算法寻找最小值和次小值2
 * @explanation    已知第几个校验节点
 *                 计算出对于这个校验节点来说，连接的变量节点传递的似然比信息的最小值和次小值
 *				  不过由于是分层算法，因此只要把这一层的变量节点消息和之前的比较即可
@@ -130,29 +175,39 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 *			   int L--第L层
 *			   int original_L_min--上一层计算得到的最小值
 *			   int original_L_submin--上一层计算得到的次小值
+*			   int &my_min_refresh_num--最小值更新了，变量节点是这个校验节点对应的第my_min_refresh_num个
+*              int &my_submin_refresh_num--次小值更新了，变量节点是这个校验节点对应的第my_submin_refresh_num个
+*              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
+*              int &refresh_flag--为0说明最小值次小值没更新，否则更新了
 * @return   none
 ************************************************************************************************/
-void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,int original_L_min,int original_L_submin)
+void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,int original_L_min,int original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &refresh_flag)
 {
 	L_min = original_L_min;
 	L_submin = original_L_submin;
 	sign = 1;
 	for (int i = 0; i < Checknode[row].weight; i++)
 	{
-		if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * L)//规定必须在这一层里
+		if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * L)//只要更新这一层即可
 		{
 			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_submin)
 			{
 				if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_min)
 				{
 					L_submin = L_min;
+					my_submin_refresh_num = min_refresh_num;
 					L_min = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
+					my_min_refresh_num = i;
 				}
 				else
 				{
 					L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
+					my_submin_refresh_num = i;
 				}
+				refresh_flag = 1;
 			}
+			else
+				refresh_flag = 0;
 			if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
 			{
 				sign = sign * -1;
@@ -212,21 +267,33 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 	float L_min = 0;
 	float L_submin = 0;
 	int sign = 1;
-	float *original_L_min;
+	float* original_L_min;
+	float* original_L_submin;
+	int* min_refresh_num;//首先，分层算法如果每一层都要把大小全部比一遍，那会浪费异常多的时间
+	//因此有一种方法，就是只要第一次比较一下，然后把最小值记录下来，之后每一层只要和这个值比较大小就行了
+	//那么这个flag是干什么的呢，当我们又找回到这个最小值的变量节点的时候，变量节点更新了，之前的最小值就不是最小值了
+	//这个时候就又要全部比一遍了，因此需要这个变量来确定最小值的变量节点的位置
+	int* submin_refresh_num;//这个变量同理
 	original_L_min = (float*)malloc(H->Checknode_num * sizeof(float));
-	float *original_L_submin;
 	original_L_submin = (float*)malloc(H->Checknode_num * sizeof(float));
+	min_refresh_num= (int*)malloc(H->Checknode_num * sizeof(int));
+	submin_refresh_num= (int*)malloc(H->Checknode_num * sizeof(int));
+    for(int row = 0; row < H->Checknode_num; row++)
+	{
+		min_refresh_num[row] = 0;
+		submin_refresh_num[row] = 0;
+	}
 	while (iter_number++ < maxIT)
 	{
 		for (int L = 0; L < col_layer_num; L++)
-		{		
+		{
 			// message from check to var
-			if (L == col_layer_num-1||L==0)            //第一层和最后一层要将所有的值一起比较最小值
+			for (int row = 0; row < H->Checknode_num; row++)
 			{
-				for (int row = 0; row < H->Checknode_num; row++)
+				if ((Checknode[row].linkVNs[min_refresh_num[row]] >= Z * (L - 1) && Checknode[row].linkVNs[min_refresh_num[row]] < Z * L)
+					|| (Checknode[row].linkVNs[submin_refresh_num[row]] >= Z * (L - 1) && Checknode[row].linkVNs[submin_refresh_num[row]] < Z * L)||L==0)       //这个条件我自己看了都想吐,意思就是如果这个变量节点就是之前找过的最小值，那就重新更新一下        
 				{
-					//find max and submax
-					findmin_submin(Checknode, Variablenode, L_min, L_submin, sign, row);
+					findmin_submin_new(Checknode, Variablenode, L_min, L_submin, sign, row, min_refresh_num[row], submin_refresh_num[row], min_refresh_num[row]);
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
 					for (int dc = 0; dc < Checknode[row].weight; dc++)
@@ -256,19 +323,15 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 						Checknode[row].L_c2v[dc] *= factor_NMS;
 					}
 				}
-			}
-			else              //之后的层只要将更新了的值和以前的最小值比较即可
-			{
-				
-				for (int row = 0; row < H->Checknode_num; row++)
+				else
 				{
-					//find max and submax
-					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row]);
+					int refresh_flag = 0;//为0说明最小值次小值没更新，否则更新了
+					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], min_refresh_num[row], submin_refresh_num[row], min_refresh_num[row],refresh_flag);
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					for (int dc = 0; dc < Checknode[row].weight; dc++)
+					if (refresh_flag == 1)
 					{
-						if (Checknode[row].linkVNs[dc] >= Z * (L-1) && Checknode[row].linkVNs[dc] < Z * L )
+						for (int dc = 0; dc < Checknode[row].weight; dc++)
 						{
 							if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
 							{
