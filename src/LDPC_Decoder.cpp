@@ -325,11 +325,15 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 				}
 				else
 				{
-					int fresh_flag=0;//等于1更新
-					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], min_refresh_num[row], submin_refresh_num[row], min_refresh_num[row],fresh_flag);
+					int refresh_flag=0;//等于1更新
+					int my_min_refresh_num;
+					int my_submin_refresh_num;
+					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row],refresh_flag);
+					min_refresh_num[row] = my_min_refresh_num;
+					submin_refresh_num[row] = my_submin_refresh_num;
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					if (fresh_flag == 1)
+					if (refresh_flag == 1)
 					{
 						for (int dc = 0; dc < Checknode[row].weight; dc++)
 						{
@@ -357,8 +361,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 							}
 							Checknode[row].L_c2v[dc] *= factor_NMS;
 						}
-					}
-					
+					}	
 				}
 			}
 			//变量节点消息之和
