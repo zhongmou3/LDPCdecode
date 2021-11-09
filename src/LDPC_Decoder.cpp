@@ -120,16 +120,13 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 * @brief      分层算法寻找最小值和次小值1
 * @explanation    已知第几个校验节点
 *                 计算出对于这个校验节点来说，连接的变量节点传递的似然比信息的最小值和次小值
-*                 这个是分层算法特有的寻找最小值的函数，因为需要一些判断用的参数
+*                 这个是分层算法特有的寻找最小值的函数
 * @param       CN *Checknode--校验节点的指针
 *			   VN *Variablenode--变量节点的指针
 *              float &L_min--计算出来的最小值
 *              float &L_submin--计算出来的次小值
 *			   int &sign--符号
 *              int row--这个校验节点是第row个
-*			   int &my_min_refresh_num--最小值更新了，变量节点是这个校验节点对应的第my_min_refresh_num个
-*              int &my_submin_refresh_num--次小值更新了，变量节点是这个校验节点对应的第my_submin_refresh_num个
-*              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
 * @return   none
 ************************************************************************************************/
 void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row, int &my_min_refresh_num, int &my_submin_refresh_num,int min_refresh_num)
@@ -175,13 +172,9 @@ void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_
 *			   int L--第L层
 *			   int original_L_min--上一层计算得到的最小值
 *			   int original_L_submin--上一层计算得到的次小值
-*			   int &my_min_refresh_num--最小值更新了，变量节点是这个校验节点对应的第my_min_refresh_num个
-*              int &my_submin_refresh_num--次小值更新了，变量节点是这个校验节点对应的第my_submin_refresh_num个
-*              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
-*              int &refresh_flag--为0说明最小值次小值没更新，否则更新了
 * @return   none
 ************************************************************************************************/
-void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,int original_L_min,int original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &refresh_flag)
+void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,int original_L_min,int original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &fresh_flag)
 {
 	L_min = original_L_min;
 	L_submin = original_L_submin;
@@ -204,10 +197,10 @@ void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, f
 					L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
 					my_submin_refresh_num = i;
 				}
-				refresh_flag = 1;
+				fresh_flag = 1;
 			}
 			else
-				refresh_flag = 0;
+				fresh_flag = 0;
 			if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
 			{
 				sign = sign * -1;
@@ -325,11 +318,11 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 				}
 				else
 				{
-					int refresh_flag = 0;//为0说明最小值次小值没更新，否则更新了
-					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], min_refresh_num[row], submin_refresh_num[row], min_refresh_num[row],refresh_flag);
+					int fresh_flag=0;//等于1更新
+					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], min_refresh_num[row], submin_refresh_num[row], min_refresh_num[row],fresh_flag);
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					if (refresh_flag == 1)
+					if (fresh_flag == 1)
 					{
 						for (int dc = 0; dc < Checknode[row].weight; dc++)
 						{
@@ -358,6 +351,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 							Checknode[row].L_c2v[dc] *= factor_NMS;
 						}
 					}
+					
 				}
 			}
 			//变量节点消息之和
