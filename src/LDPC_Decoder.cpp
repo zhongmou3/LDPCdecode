@@ -266,6 +266,8 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 	int col_layer_num = H->Variablenode_num / Z;
 	float L_min = 0;
 	float L_submin = 0;
+	int my_min_refresh_num=0;
+	int my_submin_refresh_num=0;
 	int sign = 1;
 	float* original_L_min;
 	float* original_L_submin;
@@ -326,8 +328,6 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 				else
 				{
 					int refresh_flag=0;//等于1更新
-					int my_min_refresh_num;
-					int my_submin_refresh_num;
 					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row],refresh_flag);
 					min_refresh_num[row] = my_min_refresh_num;
 					submin_refresh_num[row] = my_submin_refresh_num;
