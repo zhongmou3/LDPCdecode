@@ -127,6 +127,9 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 *              float &L_submin--计算出来的次小值
 *			   int &sign--符号
 *              int row--这个校验节点是第row个
+*              int &my_min_refresh_num--最小值更新了，变量节点是这个校验节点对应的第my_min_refresh_num个
+*              int &my_submin_refresh_num--次小值更新了，变量节点是这个校验节点对应的第my_submin_refresh_num个
+*              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
 * @return   none
 ************************************************************************************************/
 void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row, int &my_min_refresh_num, int &my_submin_refresh_num,int min_refresh_num)
@@ -172,6 +175,10 @@ void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_
 *			   int L--第L层
 *			   int original_L_min--上一层计算得到的最小值
 *			   int original_L_submin--上一层计算得到的次小值
+*              int &my_min_refresh_num--最小值更新了，变量节点是这个校验节点对应的第my_min_refresh_num个
+*              int &my_submin_refresh_num--次小值更新了，变量节点是这个校验节点对应的第my_submin_refresh_num个
+*              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
+*              int &refresh_flag--为0说明最小值次小值没更新，否则更新了
 * @return   none
 ************************************************************************************************/
 void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,int original_L_min,int original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &fresh_flag)
