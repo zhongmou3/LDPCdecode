@@ -181,14 +181,16 @@ void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_
 *              int &refresh_flag--为0说明最小值次小值没更新，否则更新了
 * @return   none
 ************************************************************************************************/
-void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,float original_L_min,float original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &fresh_flag)
+void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,float original_L_min,float original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &refresh_flag)
 {
-	L_min = original_L_min;
-	L_submin = original_L_submin;
+	L_min = FLT_MAX;
+	L_submin = FLT_MAX;
+	//L_min = original_L_min;
+	//L_submin = original_L_submin;
 	sign = 1;
 	for (int i = 0; i < Checknode[row].weight; i++)
 	{
-		if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * L)//只要更新这一层即可
+		//if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * (L))//只要更新这一层即可
 		{
 			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_submin)
 			{
@@ -204,10 +206,10 @@ void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, f
 					L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
 					my_submin_refresh_num = i;
 				}
-				fresh_flag = 1;
+				refresh_flag = 1;
 			}
 			else
-				fresh_flag = 0;
+				refresh_flag = 0;
 			if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
 			{
 				sign = sign * -1;
@@ -286,23 +288,26 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 		min_refresh_num[row] = 0;
 		submin_refresh_num[row] = 0;
 	}
+
 	while (iter_number++ < maxIT)
 	{
+//		printf("%d \n", test);
 		for (int L = 0; L < col_layer_num; L++)
 		{
 			// message from check to var
 			for (int row = 0; row < H->Checknode_num; row++)
 			{
-
-				if ((Checknode[row].linkVNs[min_refresh_num[row]] >= Z * (L - 1) && Checknode[row].linkVNs[min_refresh_num[row]] < Z * L)
-					|| (Checknode[row].linkVNs[submin_refresh_num[row]] >= Z * (L - 1) && Checknode[row].linkVNs[submin_refresh_num[row]] < Z * L)||L==0)       //如果这个变量节点就是之前找过的最小值，那就重新更新一下        
+				if (L == 0
+					||(Checknode[row].linkVNs[min_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[min_refresh_num[row]] < Z * (L))
+					|| (Checknode[row].linkVNs[submin_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[submin_refresh_num[row]] < Z * (L)))       //如果这个变量节点就是之前找过的最小值，那就重新更新一下        
 				{
 					findmin_submin_new(Checknode, Variablenode, L_min, L_submin, sign, row, my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row]);
 					min_refresh_num[row] = my_min_refresh_num;
 					submin_refresh_num[row] = my_submin_refresh_num;
+					//printf("%d %d\n", min_refresh_num[row], submin_refresh_num[row]);
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					//printf("%f %f\n", L_min, L_submin);
+					//printf("%f %f\n", original_L_min[row], original_L_submin[row]);
 					for (int dc = 0; dc < Checknode[row].weight; dc++)
 					{
 						if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
@@ -329,6 +334,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 						}
 						Checknode[row].L_c2v[dc] *= factor_NMS;
 					}
+//					test++;
 				}
 				else
 				{
@@ -338,7 +344,8 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 					submin_refresh_num[row] = my_submin_refresh_num;
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					printf("%f %f\n", L_min, L_submin);
+					//printf("%f %f\n", L_min, L_submin);
+					refresh_flag = 1;
 					if(refresh_flag == 1)
 					{
 						for (int dc = 0; dc < Checknode[row].weight; dc++)
