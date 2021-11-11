@@ -47,4 +47,7 @@
 #define Punch 2 // 为0时不需要打孔，为1时在前面打孔，为2时在后面打孔
 #define Z 256
 
+//调试用参数
+#define myprint 1
+
 #endif

@@ -114,6 +114,7 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 			sign = sign * -1;
 		}
 	}
+
 }
 /***********************************************************************************************
 *
@@ -132,10 +133,12 @@ void findmin_submin(CN *Checknode, VN *Variablenode, float &L_min, float &L_subm
 *              int min_refresh_num--之前的最小值所对应的变量节点是这个校验节点对应的第my_min_refresh_num个
 * @return   none
 ************************************************************************************************/
-void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row, int &my_min_refresh_num, int &my_submin_refresh_num,int min_refresh_num)
+void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row, int &my_min_refresh_num, int &my_submin_refresh_num,int min_refresh_num,int submin_refresh_num)
 {
 	L_min = FLT_MAX;
 	L_submin = FLT_MAX;
+	int pre_min_refresh_num= min_refresh_num;
+	int pre_submin_refresh_num=submin_refresh_num; //这两个变量的意义在函数findmin_submin_for_layered中有说明，作用相同
 	sign = 1;
 	for (int i = 0; i < Checknode[row].weight; i++)
 	{
@@ -144,7 +147,7 @@ void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_
 			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_min)
 			{
 				L_submin = L_min;
-				my_submin_refresh_num = min_refresh_num;
+				my_submin_refresh_num = pre_min_refresh_num;
 				L_min = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
 				my_min_refresh_num = i;
 			}
@@ -152,8 +155,17 @@ void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_
 			{
 				L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
 				my_submin_refresh_num = i;
+				my_min_refresh_num = pre_min_refresh_num;
 			}
 		}
+		else
+		{
+			my_min_refresh_num = pre_min_refresh_num;
+			my_submin_refresh_num = pre_submin_refresh_num;
+		}
+		pre_min_refresh_num=my_min_refresh_num;
+		pre_submin_refresh_num = my_submin_refresh_num;
+		//printf("min_refresh_num: %d %d\n", my_min_refresh_num, my_submin_refresh_num);
 		if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
 		{
 			sign = sign * -1;
@@ -181,23 +193,45 @@ void findmin_submin_new(CN* Checknode, VN* Variablenode, float& L_min, float& L_
 *              int &refresh_flag--为0说明最小值次小值没更新，否则更新了
 * @return   none
 ************************************************************************************************/
-void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,float original_L_min,float original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int &refresh_flag)
+void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, float& L_submin, int& sign, int row,int L,float original_L_min,float original_L_submin, int& my_min_refresh_num, int& my_submin_refresh_num, int min_refresh_num,int submin_refresh_num,int &refresh_flag)
 {
-	L_min = FLT_MAX;
-	L_submin = FLT_MAX;
-	//L_min = original_L_min;
-	//L_submin = original_L_submin;
+	L_min = original_L_min;
+	L_submin = original_L_submin;
+	if (0)//(myprint == 1)
+	{
+		if (row == 30)
+		{
+			printf("function_min: %f %f\n", L_min, L_submin);
+			printf("min_refresh_num: %d\n", min_refresh_num);
+		}
+	}//调试用	
+	refresh_flag = 0;
+	//my_min_refresh_num和my_submin_refresh_num这个变量如果没有在下面的if语句里更新，在函数最后要更新一下
+	//由于没注意到这个，花了很久debug
+	//利用refresh_flag作为标志，0--两个都没更新，1--更新过了
+	int pre_min_refresh_num = min_refresh_num;
+	int pre_submin_refresh_num = submin_refresh_num;//这两个变量是为了防止有更新两次的情况，所以每次要更新一下最小值的位置
 	sign = 1;
 	for (int i = 0; i < Checknode[row].weight; i++)
 	{
-		//if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * (L))//只要更新这一层即可
+		if (Checknode[row].linkVNs[i] >= Z * (L-1) && Checknode[row].linkVNs[i] < Z * (L))//只要更新这一层即可
 		{
 			if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_submin)
 			{
+				if (0)//(myprint == 1)
+				{
+					if (row == 30)
+					{
+						printf("row:  %d\n", row);
+						printf("Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]):  %f\n", myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]));
+						printf("Checknode[row].linkVNs[i]:  %d\n", Checknode[row].linkVNs[i]);
+						printf("index_in_VN(Checknode, row, i, Variablenode) %d\n", index_in_VN(Checknode, row, i, Variablenode));
+					}
+				}
 				if (myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]) < L_min)
 				{
 					L_submin = L_min;
-					my_submin_refresh_num = min_refresh_num;
+					my_submin_refresh_num = pre_min_refresh_num;
 					L_min = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
 					my_min_refresh_num = i;
 				}
@@ -205,17 +239,37 @@ void findmin_submin_for_layered(CN* Checknode, VN* Variablenode, float& L_min, f
 				{
 					L_submin = myabs(Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)]);
 					my_submin_refresh_num = i;
+					my_min_refresh_num = pre_submin_refresh_num;
 				}
 				refresh_flag = 1;
 			}
 			else
-				refresh_flag = 0;
+			{
+				my_min_refresh_num = pre_min_refresh_num;
+				my_submin_refresh_num = pre_submin_refresh_num;
+			}
+			pre_min_refresh_num = my_min_refresh_num;
+			pre_submin_refresh_num = my_submin_refresh_num;
 			if (Variablenode[Checknode[row].linkVNs[i]].L_v2c[index_in_VN(Checknode, row, i, Variablenode)] < 0)
 			{
 				sign = sign * -1;
 			}
 		}	
 	}
+	if (refresh_flag == 0)
+	{
+		my_min_refresh_num = pre_min_refresh_num;
+		my_submin_refresh_num = pre_submin_refresh_num;
+	}
+	if (0)//(myprint == 1)
+	{
+		if (row == 30)
+		{
+			printf("my_min_refresh_num: %d\n", my_min_refresh_num);
+		}
+	}
+
+	
 }
 
 void Demodulate(LDPCCode *H, AWGNChannel *AWGN, VN *Variablenode, float *Modulate_sym_Channelout)
@@ -291,23 +345,44 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 
 	while (iter_number++ < maxIT)
 	{
-//		printf("%d \n", test);
+		if (myprint == 1)
+		{
+			printf("\n");
+			printf("\n");
+			printf("\n");
+			printf("\n");
+			printf("\n");
+		}
 		for (int L = 0; L < col_layer_num; L++)
 		{
+			//test = 0;
 			// message from check to var
 			for (int row = 0; row < H->Checknode_num; row++)
-			{
+			{				
 				if (L == 0
 					||(Checknode[row].linkVNs[min_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[min_refresh_num[row]] < Z * (L))
 					|| (Checknode[row].linkVNs[submin_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[submin_refresh_num[row]] < Z * (L)))       //如果这个变量节点就是之前找过的最小值，那就重新更新一下        
 				{
-					findmin_submin_new(Checknode, Variablenode, L_min, L_submin, sign, row, my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row]);
+					findmin_submin_new(Checknode, Variablenode, L_min, L_submin, sign, row, my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row], submin_refresh_num[row]);
 					min_refresh_num[row] = my_min_refresh_num;
 					submin_refresh_num[row] = my_submin_refresh_num;
-					//printf("%d %d\n", min_refresh_num[row], submin_refresh_num[row]);
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					//printf("%f %f\n", original_L_min[row], original_L_submin[row]);
+					if (myprint == 1)
+					{
+						if (row == 30)
+						{
+							printf("%d %d %d\n", min_refresh_num[row], submin_refresh_num[row], 1);
+							printf("%f %f\n", original_L_min[row], original_L_submin[row]);
+							for (int dc = 0; dc < Checknode[row].weight; dc++)
+							{
+								printf("%f ", myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]));
+							}
+							printf("\n");
+							printf("\n");
+						}
+					}
+
 					for (int dc = 0; dc < Checknode[row].weight; dc++)
 					{
 						if (myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]) != L_min)
@@ -334,18 +409,31 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 						}
 						Checknode[row].L_c2v[dc] *= factor_NMS;
 					}
-//					test++;
+					//test++;
 				}
 				else
 				{
 					int refresh_flag=0;//等于1更新
-					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row],refresh_flag);
+
+					findmin_submin_for_layered(Checknode, Variablenode, L_min, L_submin, sign, row, L, original_L_min[row], original_L_submin[row], my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row], submin_refresh_num[row],refresh_flag);
 					min_refresh_num[row] = my_min_refresh_num;
 					submin_refresh_num[row] = my_submin_refresh_num;
 					original_L_min[row] = L_min;
 					original_L_submin[row] = L_submin;
-					//printf("%f %f\n", L_min, L_submin);
-					refresh_flag = 1;
+					if (myprint == 1)
+					{
+						if (row == 30)
+						{
+							printf("%d %d %d\n", min_refresh_num[row], submin_refresh_num[row], 0);
+							printf("%f %f\n", original_L_min[row], original_L_submin[row]);
+							for (int dc = 0; dc < Checknode[row].weight; dc++)
+							{
+								printf("%f ", myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]));
+							}
+							printf("\n");
+							printf("\n");
+						}
+					}
 					if(refresh_flag == 1)
 					{
 						for (int dc = 0; dc < Checknode[row].weight; dc++)
@@ -375,6 +463,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 							Checknode[row].L_c2v[dc] *= factor_NMS;
 						}
 					}
+					//test--;
 				}
 			}
 			//变量节点消息之和
@@ -408,8 +497,9 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 					Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
 				}
 			}
+			//printf("%d \n", test);
 		}
-
+		
 		//Hard decision
 		decode_correct = true;
 		int sum_temp = 0;
