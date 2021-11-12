@@ -345,6 +345,11 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 
 	while (iter_number++ < maxIT)
 	{
+		/*for (int dc = 0; dc < Variablenode[17240].weight; dc++)
+		{
+			printf("%f ", Variablenode[17240].linkCNs[dc]);
+		}
+		printf("%d", Variablenode[17240]);*/
 		if (myprint == 1)
 		{
 			printf("\n");
@@ -366,9 +371,9 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 					printf(" Checknode[row].linkVNs[min_refresh_num[row]] %d\n ", Checknode[row].linkVNs[min_refresh_num[row]]);
 					printf("Checknode[row].linkVNs[submin_refresh_num[row]] %d\n ", Checknode[row].linkVNs[submin_refresh_num[row]]);
 				}*/
-			//	if (L == 0
-			//		||(Checknode[row].linkVNs[min_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[min_refresh_num[row]] < Z * (L))
-			//		|| (Checknode[row].linkVNs[submin_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[submin_refresh_num[row]] < Z * (L)))       //如果这个变量节点就是之前找过的最小值，那就重新更新一下        
+				if (L == 0
+					||(Checknode[row].linkVNs[min_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[min_refresh_num[row]] < Z * (L))
+					|| (Checknode[row].linkVNs[submin_refresh_num[row]] >= Z * (L-1)  && Checknode[row].linkVNs[submin_refresh_num[row]] < Z * (L)))       //如果这个变量节点就是之前找过的最小值，那就重新更新一下        
 				{
 					findmin_submin_new(Checknode, Variablenode, L_min, L_submin, sign, row, my_min_refresh_num, my_submin_refresh_num, min_refresh_num[row], submin_refresh_num[row]);
 					min_refresh_num[row] = my_min_refresh_num;
@@ -377,7 +382,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 					original_L_submin[row] = L_submin;
 					if (myprint == 1)
 					{
-						if (row == 30)
+						if (row == 2835)
 						{
 							printf("iter_number: %d\n", iter_number);
 							printf("%d %d %d\n", min_refresh_num[row], submin_refresh_num[row], 1);
@@ -389,6 +394,23 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 
 							printf("\n");
 							printf("\n");
+							FILE* fp_H;
+							if (NULL == (fp_H = fopen("debugresult2.txt", "a")))
+							{
+								printf("can not open file: debugresult1.txt\n");
+								exit(0);
+							}
+							fprintf(fp_H, "iter_number: %d\n", iter_number);
+							fprintf(fp_H, "%d %d %d\n", min_refresh_num[row], submin_refresh_num[row], 1);
+							fprintf(fp_H, "%f %f\n", original_L_min[row], original_L_submin[row]);
+							for (int dc = 0; dc < Checknode[row].weight; dc++)
+							{
+								fprintf(fp_H,"%f ", myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]));
+							}
+
+							fprintf(fp_H, "\n");
+							fprintf(fp_H, "\n");
+							fclose(fp_H);
 						}
 					}
 
@@ -420,7 +442,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 					}
 					//test++;
 				}
-				/*else
+				else
 				{
 					int refresh_flag=0;//等于1更新
 
@@ -431,7 +453,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 					original_L_submin[row] = L_submin;
 					if (myprint == 1)
 					{
-						if (row == 30)
+						if (row == 2835)
 						{
 							printf("iter_number: %d\n", iter_number);
 							printf("%d %d %d\n", min_refresh_num[row], submin_refresh_num[row], 0);
@@ -445,6 +467,23 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 							printf(" Z* (L) %d\n ", Z * (L));
 							printf("%d\n", refresh_flag);
 							printf("\n");
+							FILE* fp_H;
+							if (NULL == (fp_H = fopen("debugresult2.txt", "a")))
+							{
+								printf("can not open file: debugresult1.txt\n");
+								exit(0);
+							}
+							fprintf(fp_H, "iter_number: %d\n", iter_number);
+							fprintf(fp_H, "%d %d %d\n", min_refresh_num[row], submin_refresh_num[row], 0);
+							fprintf(fp_H, "%f %f\n", original_L_min[row], original_L_submin[row]);
+							for (int dc = 0; dc < Checknode[row].weight; dc++)
+							{
+								fprintf(fp_H, "%f ", myabs(Variablenode[Checknode[row].linkVNs[dc]].L_v2c[index_in_VN(Checknode, row, dc, Variablenode)]));
+							}
+
+							fprintf(fp_H, "\n");
+							fprintf(fp_H, "\n");
+							fclose(fp_H);
 						}
 					}
 					if(refresh_flag == 1)
@@ -477,7 +516,7 @@ int Decoding_Layered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* Decod
 						}
 					}
 					//test--;
-				}*/
+				}
 			}
 			//变量节点消息之和
 			for (int col = L * Z; col < (L + 1) * Z; col++)
