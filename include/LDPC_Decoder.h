@@ -6,7 +6,7 @@
 
 void Demodulate(LDPCCode *H, AWGNChannel *AWGN, VN *Variablenode, float *Modulate_sym_Channelout);
 
-int Decoding_Layered_MS(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput);
+int Decoding_ColLayered_MS(LDPCCode *H, VN *Variablenode, CN *Checknode, int *DecodeOutput);
 
 int Decoding_RowLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* DecodeOutput);
 

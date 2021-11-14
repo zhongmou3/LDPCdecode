@@ -37,7 +37,7 @@
 
 #define leastErrorFrames 100 // 最少错误帧数
 #define leastTestFrames 200  // 最少仿真帧数
-#define displayStep 10   // 定义将译码结果写入相应txt文件的频率
+#define displayStep 10000   // 定义将译码结果写入相应txt文件的频率
 
 //CUDA c相应参数
 #define PI (3.1415926)

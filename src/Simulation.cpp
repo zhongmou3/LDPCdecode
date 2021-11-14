@@ -27,7 +27,9 @@ void Simulation_CPU(LDPCCode *H, AWGNChannel *AWGN, Simulation *SIM, VN *Variabl
 
 		Demodulate(H, AWGN, Variablenode, Modulate_sym_Channelout);
 
-		Decoding_Layered_MS(H, Variablenode, Checknode, DecodeOutput);
+		Decoding_RowLayered_MS(H, Variablenode, Checknode, DecodeOutput);
+
+		//Decoding_ColLayered_MS(H, Variablenode, Checknode, DecodeOutput);
 
 		//Decoding_MS(H, Variablenode, Checknode, DecodeOutput);
 
