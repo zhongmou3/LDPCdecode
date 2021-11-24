@@ -31,7 +31,7 @@
 #define snrtype 0   // 0--Eb/No; 1--Es/No
 
 //仿真参数
-#define startSNR 3.5
+#define startSNR 3.8
 #define stepSNR 0.1
 #define stopSNR 4.0
 
