@@ -20,7 +20,7 @@
 //LDPC译码器相关参数
 #define maxIT 15      // LDPC译码器最大迭代次数.其中对Q值赋初值用了一次迭代
 #define factor_BP (1)  // NMS算法中的修正因子.浮点译码器
-#define factor_NMS (0.75) // NMS算法中的修正因子.浮点译码器
+#define factor_NMS (0.9) // NMS算法中的修正因子.浮点译码器
 
 //AWGN参数
 #define ix_define 173
@@ -31,9 +31,9 @@
 #define snrtype 0   // 0--Eb/No; 1--Es/No
 
 //仿真参数
-#define startSNR 1.0
+#define startSNR 3.0
 #define stepSNR 0.1
-#define stopSNR 4.0
+#define stopSNR 3.8
 
 #define leastErrorFrames 100 // 最少错误帧数
 #define leastTestFrames 200  // 最少仿真帧数
