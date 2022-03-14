@@ -694,6 +694,7 @@ int Decoding_ColLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 	//这个时候就又要全部比一遍了，因此需要这个变量来确定最小值的变量节点的位置
 	int* submin_refresh_num;//这个变量同理
 	int test = 0;
+	int test1 =0;
 	original_L_min = (float*)malloc(H->Checknode_num * sizeof(float));
 	original_L_submin = (float*)malloc(H->Checknode_num * sizeof(float));
 	min_refresh_num = (int*)malloc(H->Checknode_num * sizeof(int));
@@ -719,14 +720,37 @@ int Decoding_ColLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 			printf("\n");
 			printf("\n");
 		}
+		test = 0;
+		test1 = 0;
 		for (int L = 0; L < col_layer_num; L++)
 		{
-			//test = 0;
 			// message from check to var
-
-
-			for (int row = 0; row < H->Checknode_num; row++)
+		
+			int *usedrow=(int*)malloc(H->Checknode_num*sizeof(int));
+			memset(usedrow,-1,H->Checknode_num*sizeof(int));
+			int index_row=0;
+			if(L>0)
 			{
+				for(int w=Z * (L-1);w<Z * (L);w++)
+				{
+					for(int z=0;z<Variablenode[w].weight;z++)
+					{
+						usedrow[index_row]=Variablenode[w].linkCNs[z];
+						index_row++;
+					}
+				}
+			}
+			else
+			{
+				for(int w=0;w<H->Checknode_num;w++)
+				{
+					usedrow[w]=w;
+				}
+			}
+
+			for (int index1 = 0; (index1 < H->Checknode_num)&&(usedrow[index1]!=-1); index1++)
+			{
+				int row=usedrow[index1];
 				/*if (myprint == 1 && row == 30)
 				{
 					printf(" Checknode[row].linkVNs[min_refresh_num[row]] %d\n ", Checknode[row].linkVNs[min_refresh_num[row]]);
@@ -801,7 +825,7 @@ int Decoding_ColLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 						}
 						Checknode[row].L_c2v[dc] *= factor_NMS;
 					}
-					//test++;
+					test++;
 				}
 				else
 				{
@@ -876,7 +900,7 @@ int Decoding_ColLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 							Checknode[row].L_c2v[dc] *= factor_NMS;
 						}
 					}
-					//test--;
+					test1++;
 				}
 			}
 			//变量节点消息之和
@@ -910,8 +934,9 @@ int Decoding_ColLayered_MS(LDPCCode* H, VN* Variablenode, CN* Checknode, int* De
 					Variablenode[col].L_v2c[dv] = Variablenode[col].LLR - Checknode[Variablenode[col].linkCNs[dv]].L_c2v[index_in_CN(Variablenode, col, dv, Checknode)];
 				}
 			}
-			//printf("%d \n", test);
+			free(usedrow);
 		}
+		// printf("%d,%d\n", test,test1);
 
 		//Hard decision
 		decode_correct = true;
